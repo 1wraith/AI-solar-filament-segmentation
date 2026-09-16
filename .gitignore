@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Competition data (not redistributable, and far too large for git)
+train/
+test/
+
+# Training outputs / checkpoints (200MB+ each, over GitHub's file limit)
+runs/
+*.pt
+*.pth
+
+# Generated predictions and sweep results
+submission.csv
+sweep_results.csv
+
+# Local-only
+_backup_*/
+.vscode/
+.idea/
