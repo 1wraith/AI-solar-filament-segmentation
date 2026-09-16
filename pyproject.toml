@@ -1,0 +1,26 @@
+[project]
+name = "solar-filament-segmentation"
+version = "0.1.0"
+description = "Instance segmentation of solar filaments in GONG H-alpha observations."
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+filterwarnings = [
+    # pycocotools vs numpy 2 copy= keyword; third-party, harmless
+    "ignore:__array__ implementation doesn't accept a copy keyword:DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["venv", "_backup_*", "train", "test", "runs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+ignore = [
+    "E702",   # `a; b` on one line is used deliberately for short paired counters
+    "RUF001", "RUF002", "RUF003",  # unicode "x"/"-" lookalikes in comments/docstrings
+]
