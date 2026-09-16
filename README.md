@@ -1,54 +1,118 @@
-# AI-solar-filament-segmentation
-AI computer vision pipeline for automated solar filament segmentation. Uses deep learning to train and evaluate segmentation models on GONG H-alpha observations, with optimized data processing, model architecture, inference, and post-processing designed to produce accurate filament masks while accounting for morphology and instance separation.
+AI Solar Filament Segmentation
+A deep-learning computer vision pipeline for automated solar filament segmentation from GONG H-alpha observations.
 
-Built for the Solar Filament Segmentation Challenge 2026 (MAGFiLO dataset), which scores
-submissions on Panoptic Quality with penalties for fragmentation, over-merging, and runtime.
+This project was developed for the Solar Filament Segmentation Challenge 2026, using the MAGFiLO dataset. The pipeline is designed around the competition's emphasis on accurate pixel-level segmentation, instance separation, and computational efficiency.
 
-## How it works
+Overview
+The system combines semantic segmentation, filament-spine detection, and instance embeddings to identify individual solar filaments and produce segmentation masks suitable for evaluation.
 
-| File | Role |
-|---|---|
-| `data.py` | COCO-style MAGFiLO loader. Rasterizes polygons/spines once and caches them, splits train/val by underlying observation, filament-biased random tiling, augmentation. |
-| `model.py` | `FilamentNet`: timm encoder + U-Net decoder with three heads (semantic, spine heatmap, instance embedding), plus the combined loss (Dice, focal, clDice, boundary, spine, discriminative push/pull). |
-| `postprocess.py` | Turns predictions into instances: threshold, gap-bridge, label blobs, then split each blob by spine seeds clustered in embedding space. Encodes masks to COCO RLE. |
-| `pipeline.py` | CLI: `train`, `infer`, `eval`, `sweep`. |
+The pipeline consists of four main stages:
 
-## Setup
+Data preparation — loads MAGFiLO annotations, rasterizes filament polygons and spines, caches processed data, and generates filament-focused training crops.
 
-```bash
+Model inference — predicts filament probability, filament spine locations, and per-pixel instance embeddings.
+
+Instance post-processing — converts model outputs into individual filament instances using connected components, gap bridging, spine seeds, and embedding-based clustering.
+
+Evaluation and inference — evaluates predictions and provides threshold sweeping for post-processing parameters before generating final predictions.
+
+Repository Structure
+File	Responsibility
+data.py	Dataset loading, annotation rasterization, caching, train/validation splitting, tiling, and augmentation.
+model.py	FilamentNet architecture and training losses. Includes semantic, spine, and instance-embedding prediction heads.
+postprocess.py	Converts network predictions into individual filament instances and provides mask encoding utilities.
+pipeline.py	Command-line entry point for training, inference, evaluation, and parameter sweeps.
+requirements.txt	Runtime Python dependencies.
+requirements-dev.txt	Development and testing dependencies.
+
+Key Features
+Semantic filament segmentation
+
+Filament spine prediction for instance identification
+
+Per-pixel instance embeddings
+
+TCP-style?
+
+Instance-aware post-processing
+
+Gap bridging for fragmented predictions
+
+Embedding-based instance separation
+
+COCO-compatible RLE mask encoding
+
+Full-image inference for 2048×2048 observations
+
+Optional tiled inference for lower-memory GPUs
+
+Test-time augmentation
+
+Configurable post-processing thresholds
+
+Automated parameter sweeping
+
+CPU-compatible test suite
+
+GPU-accelerated training with CUDA-enabled PyTorch
+
+Installation
+Python 3.10+ is recommended.
+
+Create a virtual environment:
+
 python -m venv venv
-venv/Scripts/activate        # Windows; use `source venv/bin/activate` elsewhere
-# Install a CUDA build of torch first (see pytorch.org), otherwise training runs on CPU
+
+Activate it on Windows:
+
+venv\Scripts\Activate.ps1
+
+On Linux/macOS:
+
+source venv/bin/activate
+
+Install the appropriate PyTorch build for your hardware first. For GPU training, install a CUDA-enabled version compatible with your NVIDIA driver.
+
+Then install the project dependencies:
+
 pip install -r requirements-dev.txt
-```
 
-Place the competition data so the layout is:
+Verify the installation:
 
-```
-train/MAGFiLO_1.0_Annotations_kaggle2026_train.json
-train/train_images/*.jpg
-test/test_images/*.jpg
-```
+python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available())"
 
-## Usage
+For GPU training, CUDA: True should be reported.
 
-```bash
-python pipeline.py train --data_root . --out_dir runs/exp --tile_size 640
-python pipeline.py sweep --data_root . --checkpoint runs/exp/best.pt
-python pipeline.py infer --data_root . --checkpoint runs/exp/best.pt --sem_thresh 0.5 --spine_thresh 0.4
-python pipeline.py eval  --pred_csv submission.csv --gt_json val_annotations.json
-```
+Dataset
+The project expects the competition data to be arranged approximately as follows:
 
-`sweep` tunes the post-processing thresholds on the held-out validation fold; pass the best values to
-`infer`. Inference runs on the full 2048x2048 image by default (`--tile_size 0`); set `--tile_size 896`
-if it runs out of GPU memory.
+.
+├── train/
+│   ├── MAGFiLO_1.0_Annotations_kaggle2026_train.json
+│   └── train_images/
+│       ├── image_001.jpg
+│       └── ...
+├── test/
+│   └── test_images/
+│       ├── image_001.jpg
+│       └── ...
+└── ...
 
-## Tests
+The dataset itself is not included in this repository.
 
-```bash
-pytest -q
-ruff check .
-```
+Obtain the competition dataset through the official competition distribution and ensure that its filenames and annotation structure match the expected layout before training.
 
-The test suite uses a small synthetic dataset and a tiny backbone, so it runs on CPU in seconds and
-needs neither the competition data nor pretrained weights.
+Training
+A typical training run is:
+
+python pipeline.py train \
+    --data_root . \
+    --out_dir runs/exp \
+    --tile_size 640
+
+Training checkpoints and experiment outputs are written to the specified --out_dir.
+
+For reproducible experiments, keep each training run in a separate directory rather than overwriting previous checkpoints.
+
+Parameter Sweep
+Post-processing parameters can significantly affect instance-level metrics.
